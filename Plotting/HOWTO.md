@@ -1,88 +1,76 @@
 # HOWTO: thesis figures with figstyle
 
-AI Use: This script was created solely by Anthorpic´s Claude.
+AI Use: This script was created solely by Anthropic's Claude.
 
-All thesis figures use one common style (`thesis.mplstyle`, style "D": thin grey frame,
-light grid, Paul Tol "muted" colours, TeX Gyre Heros 9/8 pt like the thesis text).
-Figures are made at their **final printed size** and are never rescaled afterwards, so
-the text size is the same in every figure. Sizes are fractions of the thesis
-`\textwidth` (448.13 pt = 6.20 in).
+All thesis figures use one common style, so they look alike: thin grey frame, light
+grid, Paul Tol "muted" colours, TeX Gyre Heros 9/8 pt like the thesis text.
+figstyle only sets this **look**. Plotting, layout and saving are done in each script
+as usual with matplotlib.
 
-## 1. Import figstyle
+| File | What it is |
+|---|---|
+| `thesis.mplstyle` | the style: fonts, font sizes, colours, frame, grid, legend |
+| `figstyle.py` | `use()`, `figsize()`, `COLORS`, `MARKERS`, `GREY` |
+| `example_figstyle.py` | template script with dummy data; output in `example_output/` |
+| `fonts/` | put the TeX Gyre Heros `.otf` files here |
 
-A script in `Plotting/` can import it directly. A script in another folder
-(e.g. `VCA_Scintillation/`) first adds `Plotting/` to the import path:
+## Use
 
 ```python
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Plotting"))  # parents[1] = MTP-code/
 
-import numpy as np
 import matplotlib.pyplot as plt
 import figstyle as fs
 
-fs.use()   # style + thesis font; call once, before any plotting
-```
+fs.use()                                              # once, before plotting
 
-## 2. Make the figure
-
-Create the figure with `fs.figsize(...)`, then plot as usual:
-
-```python
-fig, ax = plt.subplots(figsize=fs.figsize("full", aspect=0.4))
-
+fig, ax = plt.subplots(figsize=fs.figsize(1.0, aspect=0.4))
 for i, (label, (x, y)) in enumerate(my_data.items()):
-    ax.plot(x, y, marker=fs.MARKERS[i], color=fs.COLORS[i], label=label)
-
-ax.set_xlabel(r"Mean photons per pulse $\langle n \rangle$")
-ax.set_ylabel(r"Detection efficiency $\eta$")
+    ax.plot(x, y, color=fs.COLORS[i], marker=fs.MARKERS[i], label=label)
+ax.set(xlabel=r"Mean photons per pulse $\langle n \rangle$", ylabel=r"Efficiency $\eta$")
 ax.legend()
+
+fig.savefig(OUT / "efficiency_vs_mu.pdf")             # OUT: chosen by your script
 ```
-
-| `fs.figsize(width, ...)` | Width |
-|---|---|
-| `"full"` | 1.00 × `\textwidth` |
-| `"wide"` | 0.80 × `\textwidth` |
-| `"half"` | 0.49 × `\textwidth` (two side by side) |
-| `"third"` | 0.32 × `\textwidth` (three side by side) |
-| `0.6` (any number ≤ 1) | that fraction of `\textwidth` |
-
-Height: `aspect=` (height / width, default 0.4) or `height_in=` (fixed height in inches,
-useful to give figures that sit side by side the same height).
-
-Rules:
-- Do not change font sizes, and do not use `bbox_inches="tight"` (it changes the size).
-- Give each series a colour **and** a marker: `fs.COLORS[i]`, `fs.MARKERS[i]`.
-  `fs.GREY` is for reference lines and annotations.
-- Images (`imshow`): switch the grid off with `ax.grid(False)`; the colormap is magma.
-- Several panels: make the subplots as usual, then call `fs.panel_labels(fig, axes)`
-  just before saving. It adds (a), (b), (c) at the same height on every panel.
-
-## 3. Save
-
-```python
-fs.save(fig, "sq1_efficiency_vs_mu",
-        outdir=Path(__file__).resolve().parents[2] / "MTP-thesis" / "figures")
-```
-
-This writes `MTP-thesis/figures/sq1_efficiency_vs_mu.pdf` (vector, exact size; the
-folder is created if needed). Add `png=True` for a PNG preview as well.
-
-## 4. Run
-
-- VS Code: select the `MTPvenv` interpreter (Cmd+Shift+P → "Python: Select Interpreter"), then Run.
-- Terminal (from `MTP-code/`): `source MTPvenv/bin/activate`, then `python <folder>/<script>.py`.
-
-If you get the warning "TeX Gyre Heros not found", add the font path
-(`kpsewhich texgyreheros-regular.otf`) to `FONT_GLOBS` at the top of `figstyle.py`.
 
 To start a new plotting script, copy `example_figstyle.py` and replace the dummy data.
-Run it once to see the expected output in `Plotting/example_output/`.
+
+## Size
+
+`fs.figsize(width, aspect)` gives the size in inches: `width` is a fraction of the
+thesis `\textwidth` (6.20 in), `aspect` is height / width.
+
+| `width` | Use |
+|---|---|
+| `1.0` | full text width |
+| `0.49` | two figures side by side |
+| `0.32` | three figures side by side |
+
+Include the figure in LaTeX **without** a width, so it is not scaled and the font sizes
+stay as in the style: `\includegraphics{figures/efficiency_vs_mu}`.
+
+## Rules
+
+- Make the figure with `figsize=fs.figsize(...)` and do not change font sizes.
+- Save with `fig.savefig(path)`, **without** `bbox_inches="tight"` (it changes the size).
+- Same colour and marker for the same case in every figure: `fs.COLORS[i]`, `fs.MARKERS[i]`.
+  `fs.GREY` for reference lines.
+- No titles (the caption explains the figure). Panel labels: `ax.set_title("(a)")`,
+  which the style puts bold at the top left.
+- Images: `ax.grid(False)`. The default colormap is magma; for phase use `cmap="twilight"`.
+
+## Font
+
+The thesis font TeX Gyre Heros is included in `Plotting/fonts/` (four `.otf` files, free
+under the GUST Font License, from the CTAN package `tex-gyre`), so it works on any
+computer without installing anything. If the files are missing, you get a warning and
+figures use Helvetica/Arial.
 
 ## If the thesis layout changes
 
-Update `TEXTWIDTH_PT` in `figstyle.py` (read `\textwidth` from `main.log` of the
-thesis) and re-run all plotting scripts.
+Update `TEXTWIDTH_IN` in `figstyle.py` (`\textwidth` from `main.log` of the thesis, in
+pt, divided by 72.27).
 
 ---

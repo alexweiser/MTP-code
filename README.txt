@@ -29,8 +29,10 @@ MTP-code/
                         Saathof and Zadeh (2025). Optional tip-tilt correction.
   Plotting/             Common style for all thesis figures (see Plotting/HOWTO.md)
     thesis.mplstyle     matplotlib style
-    figstyle.py         use(), figsize(), panel_labels(), save()
+    figstyle.py         use(), figsize(), COLORS, MARKERS, GREY (look only; scripts
+                        plot and save themselves)
     example_figstyle.py template plotting script with dummy data
+    fonts/              TeX Gyre Heros .otf files (thesis font, GUST Font License)
 
 
 Usage

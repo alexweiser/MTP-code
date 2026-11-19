@@ -1,19 +1,21 @@
-# thesis.mplstyle: matplotlib style for all thesis figures (style "D": thin grey frame + light grid)
+# thesis.mplstyle: matplotlib style for all thesis figures
 # Author: Alexander Weiser, using Claude (2026-11-11)
+# AI Use: This script was created solely by Anthropic's Claude.
 #
 # Matched to MTP-thesis (tudelft-report class, pdflatex): body text 10 pt TeX Gyre Heros,
 # \textwidth = 448.13 pt = 6.20 in. Figure text is 9 pt (labels) and 8 pt (ticks, legend).
-# Load it with figstyle.use() (which also registers the font), not with plt.style.use() alone.
-# The figure size is NOT set here: use figstyle.figsize() so every figure gets a width that
-# fits \textwidth exactly and is included in LaTeX without scaling.
+# Load it with figstyle.use() (which also loads the font from Plotting/fonts/).
+# The figure size is NOT set here: use figstyle.figsize(), and include the figure in LaTeX
+# without scaling, so the text sizes below are the printed sizes.
 
-# ---- Font (registered by figstyle.use(); falls back to Helvetica/Arial if not found)
+# ---- Font (from Plotting/fonts/; falls back to Helvetica/Arial if not found)
 font.family        : sans-serif
 font.sans-serif    : TeX Gyre Heros, Helvetica, Arial, DejaVu Sans
 mathtext.fontset   : custom
 mathtext.rm        : TeX Gyre Heros
 mathtext.it        : TeX Gyre Heros:italic
 mathtext.bf        : TeX Gyre Heros:bold
+mathtext.cal       : TeX Gyre Heros:italic   # default "cursive" picks Apple Chancery on macOS (warning)
 mathtext.fallback  : stixsans
 
 # ---- Text sizes (pt, at final printed size)
@@ -23,6 +25,10 @@ axes.titlesize   : 9
 xtick.labelsize  : 8
 ytick.labelsize  : 8
 legend.fontsize  : 8
+
+# ---- Titles are used as panel labels: ax.set_title("(a)") gives a bold "(a)" top left
+axes.titlelocation : left
+axes.titleweight   : bold
 
 # ---- Frame: thin grey box (all four sides, matplotlib default)
 axes.linewidth     : 0.6
@@ -75,5 +81,3 @@ savefig.dpi      : 300
 savefig.format   : pdf
 savefig.bbox     : standard
 pdf.fonttype     : 42
-
-# This was created by Claude.
