@@ -1,0 +1,79 @@
+# thesis.mplstyle: matplotlib style for all thesis figures (style "D": thin grey frame + light grid)
+# Author: Alexander Weiser, using Claude (2026-11-11)
+#
+# Matched to MTP-thesis (tudelft-report class, pdflatex): body text 10 pt TeX Gyre Heros,
+# \textwidth = 448.13 pt = 6.20 in. Figure text is 9 pt (labels) and 8 pt (ticks, legend).
+# Load it with figstyle.use() (which also registers the font), not with plt.style.use() alone.
+# The figure size is NOT set here: use figstyle.figsize() so every figure gets a width that
+# fits \textwidth exactly and is included in LaTeX without scaling.
+
+# ---- Font (registered by figstyle.use(); falls back to Helvetica/Arial if not found)
+font.family        : sans-serif
+font.sans-serif    : TeX Gyre Heros, Helvetica, Arial, DejaVu Sans
+mathtext.fontset   : custom
+mathtext.rm        : TeX Gyre Heros
+mathtext.it        : TeX Gyre Heros:italic
+mathtext.bf        : TeX Gyre Heros:bold
+mathtext.fallback  : stixsans
+
+# ---- Text sizes (pt, at final printed size)
+font.size        : 9
+axes.labelsize   : 9
+axes.titlesize   : 9
+xtick.labelsize  : 8
+ytick.labelsize  : 8
+legend.fontsize  : 8
+
+# ---- Frame: thin grey box (all four sides, matplotlib default)
+axes.linewidth     : 0.6
+axes.edgecolor     : 8C8C8C
+axes.axisbelow     : True
+
+# ---- Ticks: short, inward, grey tick marks with black labels
+xtick.direction    : in
+ytick.direction    : in
+xtick.major.size   : 2.5
+ytick.major.size   : 2.5
+xtick.minor.size   : 1.5
+ytick.minor.size   : 1.5
+xtick.major.width  : 0.6
+ytick.major.width  : 0.6
+xtick.minor.width  : 0.4
+ytick.minor.width  : 0.4
+xtick.color        : 4D4D4D
+ytick.color        : 4D4D4D
+xtick.labelcolor   : black
+ytick.labelcolor   : black
+
+# ---- Grid: light grey, behind the data, major ticks only
+axes.grid          : True
+grid.color         : E6E6E6
+grid.linewidth     : 0.5
+
+# ---- Lines and markers
+lines.linewidth        : 1.2
+lines.markersize       : 3.5
+lines.markeredgewidth  : 0.8
+errorbar.capsize       : 0
+
+# ---- Colours: Paul Tol "muted" (colour-blind safe), light sand colour left out
+# indigo, rose, green, purple, cyan, teal, olive, wine
+axes.prop_cycle : cycler('color', ['332288', 'CC6677', '117733', 'AA4499', '88CCEE', '44AA99', '999933', '882255'])
+image.cmap      : magma
+
+# ---- Legend: no box
+legend.frameon       : False
+legend.handlelength  : 1.4
+legend.borderaxespad : 0.3
+legend.labelspacing  : 0.3
+
+# ---- Layout and saving
+# constrained layout keeps labels inside the figure without changing its size.
+# Do NOT use bbox_inches='tight': it crops the figure and changes its width.
+figure.constrained_layout.use : True
+savefig.dpi      : 300
+savefig.format   : pdf
+savefig.bbox     : standard
+pdf.fonttype     : 42
+
+# This was created by Claude.
