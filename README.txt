@@ -27,6 +27,11 @@ MTP-code/
     TPSim_Analysis.py   Validation of the simulation: statistics over the realisations,
                         per simulation pixel, compared with theory and with
                         Saathof and Zadeh (2025). Optional tip-tilt correction.
+  Single_Pixel/
+    px_scintillation.py Synthetic scintillation seen by one SNSPD pixel (SQ1): p(u) and
+                        time series per case, mean click probability, pixel efficiency
+                        and efficiency ratio. Exports the time series as attenuation
+                        sequences for the VCA.
   Plotting/             Common style for all thesis figures (see Plotting/HOWTO.md)
     thesis.mplstyle     matplotlib style
     figstyle.py         use(), figsize(), COLORS, MARKERS, GREY (look only; scripts
@@ -43,7 +48,7 @@ Usage
      pip install -r requirements.txt
 
 2. Data is not stored in this repository. Measurement data lives on the QuPSI U:drive.
-   Simulation output is written to a local folder Data/ (git-ignored). Its path is set
+   Output of the scripts is written to a local folder Data/ (git-ignored). Its path is set
    by DATA_DIR at the top of each script: change it to your own folder before running.
 
 3. All settings are in the dictionary `config` at the top of each script (units in the
@@ -65,6 +70,17 @@ Usage
       results.json to a new subfolder of Data/OUTPUT_TPSim_Analysis/:
         Analysis_Run__model_<model>__Dr0_<D/r0 list>__M_<M>__tiptilt_<on/off>__<date_time>/
 
+   c) Single pixel under scintillation (SQ1)
+        python Single_Pixel/px_scintillation.py
+      Main settings: cases (distribution and sigma_R2 per case), f_c_Hz, duration_s,
+      seed, pointing, eta_sde and dc_per_pulse (placeholder detector until the static
+      sweep is measured). One run takes about 6-8 s.
+      Prints the cases, the checks of the time series, the mean click probability and
+      the VCA range per case. Saves results.json, the figures pdf_cases, series_cases and
+      click_curves, and sequence_<case>.csv (t_s, u, delta_A_dB) per time series to a new
+      subfolder of Data/OUTPUT_px_scintillation/:
+        Run__fc_<f_c>Hz__pointing_<on/off>__seed_<seed>__<date_time>/
+
 
 Tests
 -----
@@ -72,3 +88,7 @@ Tests
    TPSimulation.py. It runs one realisation, checks the diffraction-limited spot, the
    propagation without phase screens (|E| = 1, flat phase) and the pupil scintillation
    index, and shows the images.
+
+   px_scintillation.py checks itself on every run: the mean click probability for an
+   exponential p(u) is compared with its closed form (self-test), and every time series
+   is compared with its model (mean, scintillation index, correlation time).
