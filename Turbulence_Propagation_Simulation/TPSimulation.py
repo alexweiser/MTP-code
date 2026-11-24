@@ -14,10 +14,13 @@ phase screens (layers); the field picks up the phase of each screen and is then
 propagated to the next screen (angular spectrum method). The turbulence strength per
 layer follows from a Cn2 profile, here the Hufnagel-Valley model with the HV5/7
 parameters (Andrews & Phillips, 2005, Eq. 12.1). The general approach follows
-Saathof and Zadeh (2025).
+Saathof and Zadeh (2025). The phase screens use the FFT method with subharmonics 
+(Schmidt, 2010); the subharmonic part is windowed at the grid edges so that the 
+screens fit the periodic propagation.
 
 Packages: HCIPy (Por et al., 2018) for grids, propagation and the focal plane;
-AOtools (Townson et al., 2019) for the phase screens.
+AOtools (Townson et al., 2019) for the FFT part of the phase screens and the 
+propagation between the layers.
 
 Usage (from the upper folder, with the virtual environment active) on MacOS:
     source MTPvenv/bin/activate
@@ -51,7 +54,7 @@ Townson, M. J., Farley, O. J. D., Orban de Xivry, G., Osborn, J., & Reeves, A. P
 import numpy as np
 import hcipy as hci
 import matplotlib.pyplot as plt
-from aotools.turbulence import ft_sh_phase_screen
+from aotools.turbulence import ft_phase_screen
 from aotools.opticalpropagation import angularSpectrum
 import h5py
 from datetime import datetime
@@ -90,6 +93,10 @@ config = {
     # numerical grid (phase screens and pupil plane)
     "N_px": 256,                        # pupil grid: N_px x N_px samples
     "screen_size_m": 2.0,               # side length of the grid
+
+    # phase screens
+    "subharmonic_levels": 9,            # number of subharmonic levels; other values: int >= 0; default: 3; 0 = FFT-only screens (almost no tip-tilt)
+    "screen_taper_fraction": 0.125,     # taper width of the screen window / grid side length; other values: 0 to 0.25 (else taper outside the aperture); default: 0.125; 0 = no window
 
     # receiver optics (telescope)
     "D_rx_m": 1.0,                      # receiver aperture diameter
@@ -358,18 +365,97 @@ def make_source_field(config, pupil_grid):
 # ---------------------------------------------------------------------------
 # Phase screen
 # ---------------------------------------------------------------------------
+def subharmonic_screen(r0_m, config, rng):
+    """Low-frequency part of a phase screen [rad], from subharmonics
+    (Schmidt, 2010, Eq. 9.81, p.169; Listing 9.3, lines 9-38, p.170).
+
+    phi_LF(x, y) = sum over p, n, m of c_nm * exp[i*2*pi*(f_xn*x + f_ym*y)],
+    with p = 1 ... config["subharmonic_levels"], n, m = -1, 0, 1 and frequency spacing 1/(3^p * L)
+    (L = side length of the grid). Random coefficients c_nm = (a + i*b) * sqrt(PSD) * delta_f,
+    a and b standard normal (Schmidt, 2010, Eq. 9.79, p.167). Modified von Karman phase PSD:
+    PSD(f) = 0.023 * r0^(-5/3) * exp(-(f/f_m)^2) / (f^2 + f_0^2)^(11/6), f_m = 5.92/(2*pi*l0),
+    f_0 = 1/L0 (Schmidt, 2010, Eq. 9.51-9.52, p.161; Listing 9.3, lines 21-25).
+
+    Parameters
+    ----------
+    r0_m : float, Fried parameter of this screen [m]
+    config : dict, simulation settings (N_px, screen_size_m, L0_m, l0_m, subharmonic_levels)
+    rng : numpy random Generator of the run
+
+    Returns
+    -------
+    2D numpy array (N_px x N_px), low-frequency phase [rad] with zero mean
+    """
+    N = config["N_px"]
+    L = config["screen_size_m"]
+    coords = np.arange(-N / 2, N / 2) * L / N       # same grid as AOtools ft_phase_screen
+    x, y = np.meshgrid(coords, coords)
+
+    f_m = 5.92 / config["l0_m"] / (2 * np.pi)        # inner-scale frequency [1/m]
+    f_0 = 1 / config["L0_m"]                         # outer-scale frequency [1/m]
+
+    phase_lo = np.zeros((N, N), dtype=complex)
+    for p in range(1, config["subharmonic_levels"] + 1):
+        delta_f = 1 / (3**p * L)                     # frequency spacing of this level [1/m]
+        fx, fy = np.meshgrid(np.arange(-1, 2) * delta_f, np.arange(-1, 2) * delta_f)
+        f = np.sqrt(fx**2 + fy**2)
+        psd = 0.023 * r0_m**(-5 / 3) * np.exp(-(f / f_m)**2) / (f**2 + f_0**2)**(11 / 6)
+        psd[1, 1] = 0                                # no zero frequency
+        c = (rng.normal(size=(3, 3)) + 1j * rng.normal(size=(3, 3))) * np.sqrt(psd) * delta_f
+        for n in range(3):
+            for m in range(3):
+                phase_lo += c[n, m] * np.exp(1j * 2 * np.pi * (fx[n, m] * x + fy[n, m] * y))
+
+    return phase_lo.real - phase_lo.real.mean()
+
+
+def screen_window(config):
+    """Square window that brings the subharmonic phase smoothly to zero at the grid edges.
+
+    W(x, y) = t(|x|) * t(|y|), with the raised-cosine taper
+        t(u) = 1                                       for u <= R - w
+        t(u) = 0.5 * (1 + cos(pi * (u - R + w) / w))   for R - w < u <= R
+    R = half the side length of the grid, w = config["screen_taper_fraction"] * side length.
+    Cosine shape and taper width as in Saathof and Zadeh (2025, p.4) and Saathof's code for
+    that paper (CircWindow.m); in contrast to them, the window here is square and acts only on
+    the subharmonic part.
+
+    Parameters
+    ----------
+    config : dict, simulation settings (N_px, screen_size_m, screen_taper_fraction)
+
+    Returns
+    -------
+    2D numpy array (N_px x N_px), on the same grid as subharmonic_screen
+    """
+    N = config["N_px"]
+    L = config["screen_size_m"]
+    u = np.abs(np.arange(-N / 2, N / 2) * L / N)     # distance from the centre, along x or y [m]
+    R = L / 2
+    w = config["screen_taper_fraction"] * L
+
+    t = np.ones(N)
+    edge = u > R - w                                 # pixels in the taper
+    t[edge] = 0.5 * (1 + np.cos(np.pi * (u[edge] - R + w) / w))
+    return np.outer(t, t)                            # t(|y|) * t(|x|): rows = y, columns = x
+
+
 def make_phase_screen(r0_m, config, seed, pupil_grid):
     """Random phase screen [rad] with Fried parameter r0_m, on the pupil grid.
 
-    FFT method with subharmonics (Schmidt, 2010, Listing 9.3, p.170), using the AOtools
-    function ft_sh_phase_screen; von Karman spectrum with outer scale L0_m and inner
-    scale l0_m from the config. AOtools returns a 2D numpy array; .ravel() flattens it
-    into the 1D order of an HCIPy Field.
+    FFT method with subharmonics (Schmidt, 2010, Listings 9.2-9.3, p.168-170):
+        phase = phi_FFT + W * phi_LF
+    phi_FFT : AOtools function ft_phase_screen (from Schmidt, 2010, Listing 9.2); von Karman spectrum
+              with outer scale L0_m and inner scale l0_m from the config
+    phi_LF  : subharmonics, see subharmonic_screen
+    W       : window at the grid edges, see screen_window (Saathof & Zadeh, 2025, p.4)
+    AOtools returns a 2D numpy array; .ravel() flattens it into the 1D order of an HCIPy Field.
 
     Parameters
     ----------
     r0_m : float, Fried parameter of this screen at the simulation wavelength [m]
-    config : dict, simulation settings (N_px, screen_size_m, L0_m, l0_m)
+    config : dict, simulation settings (N_px, screen_size_m, L0_m, l0_m, subharmonic_levels,
+             screen_taper_fraction)
     seed : int or numpy random Generator; pass the run's generator so that every
            screen is different but the run is reproducible
     pupil_grid : hci grid on which the screen is returned
@@ -379,9 +465,12 @@ def make_phase_screen(r0_m, config, seed, pupil_grid):
     hci.Field, phase in radians
     """
     pixel_size_m = config["screen_size_m"] / config["N_px"]
+    rng = np.random.default_rng(seed)    # one generator for both parts 
 
-    phase = ft_sh_phase_screen(r0_m, N=config["N_px"], delta=pixel_size_m,
-                               L0=config["L0_m"], l0=config["l0_m"], seed=seed)
+    phase_fft = ft_phase_screen(r0_m, N=config["N_px"], delta=pixel_size_m,
+                                L0=config["L0_m"], l0=config["l0_m"], seed=rng)
+    phase_lo = subharmonic_screen(r0_m, config, rng)
+    phase = phase_fft + screen_window(config) * phase_lo
     phase_field = hci.Field(phase.ravel(), pupil_grid)
     return phase_field
 
@@ -515,6 +604,7 @@ def run_simulation(config):
         f.attrs["created"] = datetime.now().isoformat()
         f.attrs["cn2_scale"] = cn2_scale
         f.attrs["D_over_r0"] = D_r0                 # D/r0 actually reached (may differ slightly from the target)
+        f.attrs["screen_window"] = "square raised-cosine window on the subharmonic part"
 
         # --- Layers and grid coordinates (identical for all realisations) ---
         f.create_dataset("layer_heights_sorted_m", data=layer_heights_sorted_m)
