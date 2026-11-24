@@ -16,7 +16,7 @@ multiplied with a pointing-jitter fade) and checked against the model. The stati
 curve of the pixel, interpolated from the static sweep (placeholder until measured), and
 an ideal curve with the fitted system detection efficiency are averaged over p(u). This
 gives the mean click probability, the pixel efficiency and its ratio to the static case.
-The time series are exported as attenuation sequences for the VCA (dynamic check,
+The time series are exported as attenuation sequences for the VOA (dynamic check,
 px_dynamic.py).
 The approach is inspired by R. Saathof's lecture on optical propagation (AE4900
 Spacecraft Communications, TU Delft, 2025).
@@ -118,7 +118,7 @@ config = {
     "save_figures": True,           # possible values: True, False
     "show_figures": False,          # possible values: True, False
     "figure_format": "png",         # possible values: "png", "pdf", "svg"
-    "save_sequences": True,         # time series as CSV for the VCA # possible values: True, False
+    "save_sequences": True,         # time series as CSV for the VOA # possible values: True, False
 }
 
 # ---------------------------------------------------------------------------
@@ -873,7 +873,7 @@ def plot_click_curves(results, config):
 # ---------------------------------------------------------------------------
 
 def relative_attenuation_dB(u):
-    """Attenuation relative to the mean that the VCA adds to play u(t).
+    """Attenuation relative to the mean that the VOA adds to play u(t).
 
     delta_A = -10 log10(u) [dB]; A(t) = A_mean + delta_A then plays the normalised power
     vector times the mean power (Shrestha et al., 2016, p.5).
@@ -891,7 +891,7 @@ def relative_attenuation_dB(u):
     return delta_A_dB
 
 def export_sequence(u, delta_A_dB, name, config):
-    """Save one time series as CSV for the VCA: time, u and relative attenuation.
+    """Save one time series as CSV for the VOA: time, u and relative attenuation.
 
     Parameters
     ----------
@@ -1023,8 +1023,8 @@ if __name__ == "__main__":
               f"{np.max(np.abs(p_measured - p_ideal)):19.1e} {series_text:>17}")
     print("  (r = efficiency ratio of the ideal curve; differences of P_mean: maximum over n)")
 
-    # attenuation sequences for the VCA
-    print("\n=== Sequences for the VCA ===")
+    # attenuation sequences for the VOA
+    print("\n=== Sequences for the VOA ===")
     print(f"  {'case':<15} {'min [dB]':>8} {'max [dB]':>8} {'range [dB]':>10}")
     delta_A_by_case = {}                               # {case name: delta_A(t)}
     for name, u in series_by_case.items():

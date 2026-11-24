@@ -31,7 +31,7 @@ MTP-code/
     px_scintillation.py Synthetic scintillation seen by one SNSPD pixel (SQ1): p(u) and
                         time series per case, mean click probability, pixel efficiency
                         and efficiency ratio. Exports the time series as attenuation
-                        sequences for the VCA.
+                        sequences for the VOA.
   Plotting/             Common style for all thesis figures (see Plotting/HOWTO.md)
     thesis.mplstyle     matplotlib style
     figstyle.py         use(), figsize(), COLORS, MARKERS, GREY (look only; scripts
@@ -76,7 +76,7 @@ Usage
       seed, pointing, eta_sde and dc_per_pulse (placeholder detector until the static
       sweep is measured). One run takes about 6-8 s.
       Prints the cases, the checks of the time series, the mean click probability and
-      the VCA range per case. Saves results.json, the figures pdf_cases, series_cases and
+      the VOA range per case. Saves results.json, the figures pdf_cases, series_cases and
       click_curves, and sequence_<case>.csv (t_s, u, delta_A_dB) per time series to a new
       subfolder of Data/OUTPUT_px_scintillation/:
         Run__fc_<f_c>Hz__pointing_<on/off>__seed_<seed>__<date_time>/
